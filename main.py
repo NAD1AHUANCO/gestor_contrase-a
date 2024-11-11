@@ -6,6 +6,7 @@ import re
 from usuario import Usuario
 # Diccionario de usuarios registrados (para pruebas, puedes cambiar esto a una base de datos) 
 usuarios_registrados = {}
+#nosskskksks
 
 #IMPORTAR CLASES
 import datosprivados
