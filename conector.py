@@ -33,7 +33,6 @@ class DataBase:
                         nombre TEXT NOT NULL,
                         apellido TEXT NOT NULL,
                         dni TEXT UNIQUE NOT NULL,
-                        logueo TEXT UNIQUE NOT NULL,
                         contraseña TEXT NOT NULL,
                         id_datosprivados INTEGER,
                         FOREIGN KEY (id_datosprivados) REFERENCES datosprivados(id)
@@ -43,36 +42,21 @@ class DataBase:
         tabla_cuentas = '''CREATE TABLE IF NOT EXISTS cuentas (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         tipo_cuenta TEXT NOT NULL,
+                        nombre_cuenta TEXT NOT NULL,
                         usuario_cuenta TEXT NOT NULL,
                         contraseña_cuenta TEXT NOT NULL,
                         id_usuario INTEGER,
-                        id_categoria INTEGER,
-                        FOREIGN KEY (id_usuario) REFERENCES usuario(id),
-                        FOREIGN KEY (id_categoria) REFERENCES categoria(id)
+                        FOREIGN KEY (id_usuario) REFERENCES usuario(id)
                         )'''
-
-        # Crear tabla categoria
-        tabla_categoria = '''CREATE TABLE IF NOT EXISTS categoria (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        nombre TEXT UNIQUE
-                        )'''
+        
         
         try:
             conn= self.conectar()
             cur = conn.cursor()
-            #cur.execute(crear_database)
-            #cur.execute("USE %s" %'gestor_c')
             cur.execute(tabla_datosprivados)
             cur.execute(tabla_usuario)
-            cur.execute(tabla_categoria)
             cur.execute(tabla_cuentas)
-            #CREAR SOLO UNA SOLA VEZ LA TABLA CATEGORÍA
-            try:
-                cur.execute("INSERT INTO categoria (nombre) values ('todos')")
-                conn.commit()
-            except:
-                print("La categoria ya existe")
             conn.close()
-        except Exception:
-            print("Error al conectar o crear la base de datos.")
+        except Exception as error:
+            print(f"Error al conectar o crear la base de datos.{error}")
             raise

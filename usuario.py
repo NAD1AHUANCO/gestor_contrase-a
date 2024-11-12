@@ -16,15 +16,14 @@ import conector
 import datosprivados
 
 class Usuario:
-    def __init__(self, nombre=None, apellido=None, dni=None, logueo=False, contrasena=None):
+    def __init__(self, nombre=None, apellido=None, dni=None, contrasena=None):
         #Inicializa la clase Usuario con los datos básicos y la contraseña maestra.
         self.nombre = nombre
         self.apellido = apellido
         self.dni = dni if dni is not None else "" # Asegura que self.dni no sea None 
         self.contrasena = contrasena if contrasena is not None else "" # Asegura que self.contrasena no sea None
-        self.logueo = False  # Indica si el usuario está logueado. # Almacena el nombre de usuario
-        self.contrasenas = {}  # Diccionario para almacenar contraseñas
-        self.carpetas = {}  # Diccionario para organizar contraseñas por carpetas
+        # self.contrasenas = {}  # Diccionario para almacenar contraseñas
+        # self.carpetas = {}  # Diccionario para organizar contraseñas por carpetas
         print(f"Usuario creado con DNI: {self.dni}, Contraseña: {self.contrasena}") # Impresión de depuración
     
     ###################### VALIDACIONES DE LOGUEO ######################
@@ -70,46 +69,39 @@ class Usuario:
 
 
     #CREAMOS LA BASE DE DATOS: inserta los datos privados y los datos del usuario en la base de datos
-    def crear_usuario(self, usuario, datos: datosprivados.DatosPrivados): #datos: datosprivados.DatosPrivados que tipo de datos estamos recibiendo
-        print("Crear usuario")
+    def crear_usuario(self): #datos: datosprivados.DatosPrivados que tipo de datos estamos recibiendo
         con=conector.DataBase().conectar() #me conecto a la base de datos
-        print("Crear usuario1")
         cursor=con.cursor() #Con el cursos realizamos los cambio en la bs
-        print("Crear usuario2")
-        #
         try:
-            query_datos="""INSERT INTO datosprivados (tipo_tarjeta, nombre_tarjeta, numero_tarjeta, fecha_vencimiento, codigo_seguridad, nombre_titular) values
-                        (%s,%s,%s,%s,%s,%s)""" #instrucción para ejecución el insertar los parametros en la base de datos
-            print("Crear usuario3")
-            cursor.execute(query_datos, (datos.tipo_tarjeta, datos.nombre_tarjeta, datos.numero_tarjeta, datos.fecha_vencimiento, datos.codigo_seguridad, datos.nombre_titular))  #ejecutamos la sentencia creado
-            print("Crear usuario4")
-            con.commit() #ejecutame el guardado de la instrucción
-            print("Crear usuario5")
-            id_datos=cursor.lastrowid #me trae el id del objeto que acabo de crear
-            print("Crear usuario6")
-            query_usuario="""INSERT INTO usuario (nombre, apellido, dni, logueo, contraseña, id_datosprivados) values
-                        (%s,%s,%s,%s,%s,%s)"""
-            print("Crear usuario7")
-            cursor.execute(query_usuario, (usuario.nombre, usuario.apellido, usuario.dni, usuario.logueo, usuario.contrasena, id_datos))
-            print("Crear usuario8")
+            query_usuario="""INSERT INTO usuario (nombre, apellido, dni, contraseña) 
+            values (?,?,?,?)"""
+            cursor.execute(query_usuario, (self.nombre, self.apellido, self.dni, self.contrasena))
             con.commit()
-            print("Crear usuario9")
             con.close() #cierro la base de datos despues de crear los objetos
-            print("Crear usuario10")
-        except Exception:
+            return True
+        except Exception as error:
             con.close() #si hubo algun error me cierra la conección
-            print(Exception.__str__)
+            print(f'error, {error}')
+            return False
 
 
-    def loguear(self, contrasena):
+    def loguear(self, dni, contrasena):
         """
         Permite el logueo del usuario si la contraseña ingresada es correcta.
         """
-        if contrasena == self.contrasena:
-            self.logueo = True
-            print("Inicio de sesión exitoso.")
-        else:
-            print("Contraseña incorrecta. No se pudo iniciar sesión.")
+        con=conector.DataBase().conectar() 
+        try:
+            cursor=con.cursor() 
+            query_inicio="""SELECT * FROM usuario WHERE dni= (?) AND contraseña= (?)""" 
+            cursor.execute(query_inicio, (dni,contrasena)) 
+            user=cursor.fetchone()
+            con.close()
+            return user
+        except Exception as error:
+            con.close() #si hubo algun error me cierra la conección
+            print(error)
+            return None
+        
 
     def verificar_logueo(self):
         """

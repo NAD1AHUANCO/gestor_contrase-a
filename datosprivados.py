@@ -1,6 +1,6 @@
 
 class DatosPrivados:
-    def __init__(self, tipo_tarjeta, numero_tarjeta, fecha_vencimiento, codigo_seguridad, nombre_titular, nombre_tarjeta="a"):
+    def __init__(self, tipo_tarjeta = None, numero_tarjeta = None, fecha_vencimiento = None, codigo_seguridad = None, nombre_titular = None, nombre_tarjeta = None):
         self.tipo_tarjeta = tipo_tarjeta
         self.nombre_tarjeta = nombre_tarjeta
         self.numero_tarjeta = numero_tarjeta

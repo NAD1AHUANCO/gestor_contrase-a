@@ -4,13 +4,13 @@ import conector
 import re
 #IMPORTAMOS LAS CLASES
 from usuario import Usuario
+from cuentas import Cuentas
+from datosprivados import DatosPrivados
 # Diccionario de usuarios registrados (para pruebas, puedes cambiar esto a una base de datos) 
 usuarios_registrados = {}
 #nosskskksks
 
 #IMPORTAR CLASES
-import datosprivados
-import usuario
 
 #INTACIAMOS LAS CLASES
 #color_1=Prueba("rojo")
@@ -21,12 +21,99 @@ carpetas = {}  # Almacenará las carpetas de credenciales
 
 ################################################################################################
 # Función para abrir una ventana de submenú  / PARA PROBAR PROGRAMA
-def abrir_ventana(titulo, mensaje):
+def abrir_ventana(titulo, mensaje, usuario: tuple, accion):
     ventana = tk.Toplevel()
     ventana.title(titulo)
-    ventana.geometry("300x150")
+    ventana.geometry("500x500")
     label = tk.Label(ventana, text=mensaje, font=("Arial", 12))
     label.pack(pady=30)
+
+    frame_con_scroll = tk.Frame(ventana)
+    frame_con_scroll.pack(fill="both", expand=True, padx=10, pady=10)
+    canvas = tk.Canvas(frame_con_scroll)
+    scrollbar = tk.Scrollbar(frame_con_scroll, orient="vertical", command=canvas.yview)
+    lista_frame = tk.Frame(canvas)
+
+    lista_frame.bind(
+        "<Configure>",
+        lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+    )
+
+    canvas.create_window((0, 0), window=lista_frame, anchor="nw")
+    canvas.configure(yscrollcommand=scrollbar.set)
+
+    canvas.pack(side="left", fill="both", expand=True)
+    scrollbar.pack(side="right", fill="y")
+
+    cuentas = Cuentas().ver_cuentas(user_id=usuario[0])
+
+    if cuentas:
+        # Crear tarjetas para cada cuenta en el usuario
+        for cuenta in cuentas:
+            # Crear un marco para cada tarjeta
+            tarjeta_frame = tk.Frame(lista_frame, bg="lightgrey", bd=2, relief="groove")
+            tarjeta_frame.pack(pady=10, padx=10, fill="x")
+
+            # Agregar campos a la tarjeta
+            tk.Label(tarjeta_frame, text=f"Tipo de Cuenta: {cuenta[1]}", font=("Arial", 10, "bold"), bg="lightgrey").pack(anchor="w", padx=10, pady=2)
+            tk.Label(tarjeta_frame, text=f"Nombre de Cuenta: {cuenta[2]}", bg="lightgrey").pack(anchor="w", padx=10, pady=2)
+            tk.Label(tarjeta_frame, text=f"Usuario: {cuenta[3]}", bg="lightgrey").pack(anchor="w", padx=10, pady=2)
+            tk.Label(tarjeta_frame, text=f"Contraseña: {cuenta[4]}", bg="lightgrey").pack(anchor="w", padx=10, pady=2)
+
+            botones_frame = tk.Frame(tarjeta_frame, bg="lightgrey")
+            botones_frame.pack(side="right", padx=10, pady=10)
+
+            def eliminar_cuenta_y_frame(cuenta_id, frame):
+                Cuentas().eliminar_cuenta(cuenta_id)  # Eliminar en la base de datos
+                frame.destroy() 
+
+            def editar_cuenta_y_popup(cuenta):
+                editar_popup = tk.Toplevel()
+                editar_popup.title("Editar Cuenta")
+                editar_popup.geometry("300x250")
+
+                tk.Label(editar_popup, text="Tipo de Cuenta:").pack(anchor="w", padx=10, pady=5)
+                tipo_entry = tk.Entry(editar_popup)
+                tipo_entry.insert(0, cuenta[1])
+                tipo_entry.pack(anchor="w", padx=10)
+
+                tk.Label(editar_popup, text="Nombre de Cuenta:").pack(anchor="w", padx=10, pady=5)
+                nombre_entry = tk.Entry(editar_popup)
+                nombre_entry.insert(0, cuenta[2])
+                nombre_entry.pack(anchor="w", padx=10)
+
+                tk.Label(editar_popup, text="Usuario:").pack(anchor="w", padx=10, pady=5)
+                usuario_entry = tk.Entry(editar_popup)
+                usuario_entry.insert(0, cuenta[3])
+                usuario_entry.pack(anchor="w", padx=10)
+
+                tk.Label(editar_popup, text="Contraseña:").pack(anchor="w", padx=10, pady=5)
+                contrasena_entry = tk.Entry(editar_popup)
+                contrasena_entry.insert(0, cuenta[4])
+                contrasena_entry.pack(anchor="w", padx=10)
+                btn_guardar = tk.Button(editar_popup, text="Guardar", command=lambda c=cuenta: guardar_cambios(c))
+                btn_guardar.pack(pady=10)
+
+                def guardar_cambios(c):
+                    nuevo_tipo = tipo_entry.get()
+                    nuevo_nombre = nombre_entry.get()
+                    nuevo_usuario = usuario_entry.get()
+                    nueva_contrasena = contrasena_entry.get()
+                    cuenta = Cuentas(id=c[0], tipo_cuenta=nuevo_tipo, usuario_cuenta=nuevo_usuario, nombre_cuenta=nuevo_nombre, contraseña_cuenta=nueva_contrasena)
+                    edit = cuenta.editar_cuenta()
+                    editar_popup.destroy()
+                    messagebox.showinfo("Éxito", "La cuenta ha sido actualizada")
+
+            
+            if accion == 'editar':
+                btn_editar = tk.Button(botones_frame, text="Editar", command=lambda c=cuenta: editar_cuenta_y_popup(c))
+                btn_editar.pack(pady=2)
+
+            if accion == 'eliminar':
+                btn_eliminar = tk.Button(botones_frame, text="Eliminar", command=lambda c=cuenta[0], f=tarjeta_frame: eliminar_cuenta_y_frame(c, f))
+                btn_eliminar.pack(pady=2)
+
+
 
 # Clase base para los formularios
 class FormularioBase(tk.Toplevel):
@@ -89,17 +176,32 @@ class FormularioBase(tk.Toplevel):
         record = {}
         for field_name, entry in self.entries.items():
             value = entry.get() if not isinstance(entry, tk.StringVar) else entry.get()
+
             if not self.validate_input(field_name, value, str if isinstance(entry, tk.StringVar) else int):
                 return
             record[field_name] = value
-        self.data.append(record)
-        messagebox.showinfo("Guardado", "Los datos fueron guardados exitosamente.")
-        for entry in self.entries.values():
-            if isinstance(entry, tk.StringVar):  # Si es desplegable, restablece al valor predeterminado
-                entry.set(entry.get())
-            else:
-                entry.delete(0, tk.END)
-        self.withdraw()
+        #guardar en la db con los datos de record
+        if self._name == '!formulario1':
+            user = Usuario(nombre=record['Ingrese su nombre'], apellido=record['Ingrese su apellido'], dni=record['Ingrese su dni'], contrasena=record['Ingrese su Ingrese su contraseña'])
+            is_created = user.crear_usuario()
+        elif self._name == '!formulario2':
+            cuenta = Cuentas(tipo_cuenta= record['Tipo de cuenta'],nombre_cuenta= record['Nombre de cuenta'], usuario_cuenta= record['Usuario de cuenta'], contraseña_cuenta= record['Contraseña de cuenta'])
+            is_created = cuenta.agregar_cuenta(self.usuario[0])
+        elif self._name == '!formulario3':
+            datos = DatosPrivados()
+
+        if is_created:
+            self.withdraw()
+            messagebox.showinfo("Guardado", "Los datos fueron guardados exitosamente.")
+        else:
+            messagebox.showerror("Error", "Error al guardar los datos.")
+        # self.data.append(record)
+        
+        # for entry in self.entries.values():
+        #     if isinstance(entry, tk.StringVar):  # Si es desplegable, restablece al valor predeterminado
+        #         entry.set(entry.get())
+        #     else:
+        #         entry.delete(0, tk.END)
     # Método para obtener los datos guardados
     def get_data(self):
         return self.data
@@ -118,7 +220,8 @@ class Formulario1(FormularioBase):
 
 # Formulario 2 con menú desplegable para el tipo de cuenta
 class Formulario2(FormularioBase):
-    def __init__(self):
+    def __init__(self, usuario):
+        self.usuario = usuario
         fields = {
             "Tipo de cuenta": ["redes sociales", "correo electrónico", "plataformas de trabajo", "plataformas de estudio", "plataformas de entretenimiento"],
             "Nombre de cuenta": str,
@@ -189,9 +292,9 @@ def open_form1():
     global form1
     form1 = Formulario1()
 
-def open_form2():
+def open_form2(usuario):
     global form2
-    form2 = Formulario2()
+    form2 = Formulario2(usuario)
 
 def open_form3():
     global form3
@@ -206,7 +309,7 @@ def open_form4():
     Formulario4(forms_data)
 ################################################################################################
 # Función para abrir el submenú 1 de Gestión de Contraseñas
-def gestion_contraseñas(menu_principal):
+def gestion_contraseñas(menu_principal, usuario):
     ventana_gestion = tk.Toplevel(root)
     ventana_gestion.title("Gestión de Contraseñas")
     ventana_gestion.geometry("400x400")
@@ -214,20 +317,20 @@ def gestion_contraseñas(menu_principal):
     label_gestion = tk.Label(ventana_gestion, text="Gestión de Contraseñas", font=("Arial", 14))
     label_gestion.pack(pady=10)
 
-    button_agregar = tk.Button(ventana_gestion, text="1. Agregar una nueva cuenta y contraseña", command=lambda: open_form2())
+    button_agregar = tk.Button(ventana_gestion, text="1. Agregar una nueva cuenta y contraseña", command=lambda: open_form2(usuario))
     #tk.Button(root, text="Formulario 1", command=open_form1).pack(pady=10)
     button_agregar.pack(pady=5)
 
-    button_ver = tk.Button(ventana_gestion, text="2. Ver todas las contraseñas", command=lambda: abrir_ventana("Ver Contraseñas", "Aquí puedes ver todas las contraseñas guardadas"))
+    button_ver = tk.Button(ventana_gestion, text="2. Ver todas las contraseñas", command=lambda: abrir_ventana("Ver Contraseñas", "Aquí puedes ver todas las contraseñas guardadas", usuario, 'ver'))
     button_ver.pack(pady=5)
 
-    button_buscar = tk.Button(ventana_gestion, text="3. Buscar una contraseña", command=lambda: abrir_ventana("Buscar Contraseña", "Aquí puedes buscar una contraseña por cuenta o categoría"))
+    button_buscar = tk.Button(ventana_gestion, text="3. Buscar una contraseña", command=lambda: abrir_ventana("Buscar Contraseña", "Aquí puedes buscar una contraseña por cuenta o categoría", usuario, 'buscar'))
     button_buscar.pack(pady=5)
 
-    button_actualizar = tk.Button(ventana_gestion, text="4. Actualizar una contraseña", command=lambda: abrir_ventana("Actualizar Contraseña", "Aquí puedes actualizar una contraseña existente"))
+    button_actualizar = tk.Button(ventana_gestion, text="4. Actualizar una contraseña", command=lambda: abrir_ventana("Actualizar Contraseña", "Aquí puedes actualizar una contraseña existente", usuario, 'editar'))
     button_actualizar.pack(pady=5)
 
-    button_eliminar = tk.Button(ventana_gestion, text="5. Eliminar una contraseña", command=lambda: abrir_ventana("Eliminar Contraseña", "Aquí puedes eliminar una contraseña"))
+    button_eliminar = tk.Button(ventana_gestion, text="5. Eliminar una contraseña", command=lambda: abrir_ventana("Eliminar Contraseña", "Aquí puedes eliminar una contraseña", usuario, 'eliminar'))
     button_eliminar.pack(pady=5)
 
     # Botón para volver al menú principal
@@ -340,7 +443,7 @@ def volver_menu(menu_principal, ventana_submenu):
 
 ################################################################################################
 # Función para la ventana del MENÚ PRINCIPAL
-def abrir_menu():
+def abrir_menu(usuario: tuple):
     menu = tk.Toplevel(root)
     menu.title("Menú Principal del Gestor de Contraseñas")
     menu.geometry("400x400")
@@ -350,7 +453,7 @@ def abrir_menu():
     label_menu.pack(pady=10)
 
     # Opción 1: Gestión de Contraseñas
-    button_gestion = tk.Button(menu, text="1. Gestión de Contraseñas", command=lambda: gestion_contraseñas(menu))
+    button_gestion = tk.Button(menu, text="1. Gestión de Contraseñas", command=lambda: gestion_contraseñas(menu, usuario))
     button_gestion.pack(pady=5)
 
     # Opción 2: Organización de Credenciales
@@ -371,6 +474,7 @@ def abrir_menu():
 
     button_cerrar_sesion = tk.Button(menu, text="Cerrar sesión", command=menu.quit)
     button_cerrar_sesion.pack(pady=20)
+
 
 ################################################################################################
 """
@@ -395,13 +499,13 @@ def iniciar_sesion():
     dni = entry_dni.get()
     contrasena = entry_contrasena.get()
     
-    #usuario = Usuario().loguear(dni, contrasena)
+    usuario = Usuario().loguear(dni, contrasena)
     #verificación de autenticidad
     # if username in usuarios_registrados and usuarios_registrados[username] == password:
     if usuario:
         messagebox.showinfo("Inicio de Sesión", "Inicio de sesión exitoso")
         root.withdraw()  # Oculta la ventana de login
-        abrir_menu()  # Abre el menú principal
+        abrir_menu(usuario)  # Abre el menú principal
     else:
         messagebox.showerror("Error", "Usuario o contraseña incorrectos")
 
